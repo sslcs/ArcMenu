@@ -1,232 +1,323 @@
 package com.sslcs.arcmenu;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.util.AttributeSet;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.widget.RelativeLayout;
+import com.nineoldandroids.view.ViewPropertyAnimator;
+
+import java.util.ArrayList;
 
 public class ArcMenu extends RelativeLayout
 {
-    private boolean areButtonsShowing = false;// 有冇展開
-    private Context mycontext;
-    private ImageView cross; // 主按鈕中間嗰個十字
-    private Animations myani; // 動畫類
-    private LinearLayout[] llayouts; // 子按鈕集
-    private int durTime = 300;
+    private boolean isShowing = false;
+    private Context mContext;
+    private byte mCount;
+    private View[] mChilds;
+    private View mMenu;
+    private int mDuration = 300;
+    private int mRadius;
+    private OnItemClickListener mListener;
+    private ArcMenu.Position mPosition;
+    private double mAngleRange = 180.0;
+    private byte mOriX = 1, mOriY = 1;
+    private ArrayList<ViewPropertyAnimator> mAnimators = new ArrayList<ViewPropertyAnimator>();
 
     public ArcMenu(Context context, AttributeSet attrs)
     {
         super(context, attrs);
-        this.mycontext = context;
+        mContext = context;
+        setRadius(90);
     }
 
     /**
-     * 初始化
+     * Rotate animation fo menu view
      *
-     * @param imgResId         子按鈕嘅圖片drawalbe嘅id[]
-     * @param showhideButtonId 主按鈕嘅圖片drawable嘅id
-     * @param crossId          主按鈕上面嗰個轉動十字嘅圖片drawable嘅id
-     * @param pos              位置代碼，例如“右上角”係ALIGN_PARENT_BOTTOM|ALIGN_PARENT_RIGHT
-     * @param radius           半徑
-     * @param durationMillis   動畫耗時
+     * @param from           from degrees
+     * @param to             to degrees
+     * @param durationMillis milliseconds of duration
      */
-    public void init(int[] imgResId, int showhideButtonId, int crossId, Position pos, int radius, final int durationMillis)
+    public static Animation getRotateAnimation(float from, float to, int durationMillis)
     {
-        durTime = durationMillis;
-        int[] align = initAlign(pos);
-        // 如果細過半徑就整大佢
-        RelativeLayout.LayoutParams thislps = (LayoutParams) this.getLayoutParams();
-        Bitmap mBottom = BitmapFactory.decodeResource(mycontext.getResources(), imgResId[0]);
-        if (pos == Position.CENTERBOTTOM || pos == Position.CENTERTOP)
-        {
-            if (thislps.width != -1 && thislps.width != -2 && thislps.width < (radius + mBottom.getWidth() + radius * 0.1) * 2)
-            {
-                thislps.width = (int) ((radius * 1.1 + mBottom.getWidth()) * 2);
-            }
-        }
-        else
-        {
-            if (thislps.width != -1 && thislps.width != -2 && thislps.width < radius + mBottom.getWidth() + radius * 0.1)
-            {
-                thislps.width = (int) (radius * 1.1 + mBottom.getWidth());
-            }
-        }
-        if (pos == Position.LEFTCENTER || pos == Position.RIGHTCENTER)
-        {
-            if (thislps.height != -1 && thislps.height != -2 && thislps.height < (radius + mBottom.getHeight() + radius * 0.1) * 2)
-            {
-                thislps.width = (int) ((radius * 1.1 + mBottom.getHeight()) * 2);
-            }
-        }
-        else
-        {
-            if (thislps.height != -1 && thislps.height != -2 && thislps.height < radius + mBottom.getHeight() + radius * 0.1)
-            {
-                thislps.height = (int) (radius * 1.1 + mBottom.getHeight());
-            }
-        }
-        this.setLayoutParams(thislps);
-        // 兩個主要層
-        RelativeLayout rl1 = new RelativeLayout(mycontext);// 包含若干子按鈕嘅層
+        RotateAnimation ra = new RotateAnimation(from, to, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        ra.setDuration(durationMillis);
+        ra.setFillAfter(true);
+        return ra;
+    }
 
-        RelativeLayout rlButton = new RelativeLayout(mycontext);
-        llayouts = new LinearLayout[imgResId.length];
+    /**
+     * initialization
+     *
+     * @param childs child views
+     * @param menu   menu view
+     * @param pos    {@link com.sslcs.arcmenu.ArcMenu.Position}
+     */
+    public void init(View[] childs, View menu, Position pos)
+    {
+        mCount = (byte) childs.length;
+        mChilds = childs;
+
+        int[] align = initPosition(pos);
 
         int wrap = LayoutParams.WRAP_CONTENT;
+        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(wrap, wrap);
+        params.alignWithParent = true;
+        params.addRule(align[0], RelativeLayout.TRUE);
+        params.addRule(align[1], RelativeLayout.TRUE);
+        addChildViews(childs,params);
+        addMenuView(menu,params);
+    }
+
+    private void addChildViews(View[] childs,RelativeLayout.LayoutParams params)
+    {
         int match = LayoutParams.MATCH_PARENT;
-        // N個子按鈕
-        for (int i = 0; i < imgResId.length; i++)
+        RelativeLayout rlChilds = new RelativeLayout(mContext);
+        RelativeLayout.LayoutParams paramsRL = new RelativeLayout.LayoutParams(match, match);
+        paramsRL.alignWithParent = true;
+        rlChilds.setLayoutParams(paramsRL);
+        if (null != mListener)
         {
-            ImageView img = new ImageView(mycontext);// 子按扭圖片
-            img.setImageResource(imgResId[i]);
-            LinearLayout.LayoutParams llps = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-
-            img.setLayoutParams(llps);
-            llayouts[i] = new LinearLayout(mycontext);// 子按鈕層
-            llayouts[i].setId(imgResId[i]);
-            llayouts[i].addView(img);
-
-            RelativeLayout.LayoutParams rlps = new RelativeLayout.LayoutParams(wrap, wrap);
-            rlps.alignWithParent = true;
-            rlps.addRule(align[0], RelativeLayout.TRUE);
-            rlps.addRule(align[1], RelativeLayout.TRUE);
-            llayouts[i].setLayoutParams(rlps);
-            llayouts[i].setVisibility(View.INVISIBLE);// 此处不能为GONE
-            rl1.addView(llayouts[i]);
+            setClickListener();
         }
-        RelativeLayout.LayoutParams rlps1 = new RelativeLayout.LayoutParams(match, match);
-        rlps1.alignWithParent = true;
-        rlps1.addRule(align[0], RelativeLayout.TRUE);
-        rlps1.addRule(align[1], RelativeLayout.TRUE);
-        rl1.setLayoutParams(rlps1);
+        for (View child : childs)
+        {
+            child.setLayoutParams(params);
+            rlChilds.addView(child);
+            ViewPropertyAnimator anim = ViewPropertyAnimator.animate(child);
+            mAnimators.add(anim);
+        }
+        addView(rlChilds);
+    }
 
-        RelativeLayout.LayoutParams buttonlps = new RelativeLayout.LayoutParams(wrap, wrap);
-        buttonlps.alignWithParent = true;
-        buttonlps.addRule(align[0], RelativeLayout.TRUE);
-        buttonlps.addRule(align[1], RelativeLayout.TRUE);
-        rlButton.setLayoutParams(buttonlps);
-        rlButton.setBackgroundResource(showhideButtonId);
-        cross = new ImageView(mycontext);
-        cross.setImageResource(crossId);
-        RelativeLayout.LayoutParams crosslps = new RelativeLayout.LayoutParams(wrap, wrap);
-        crosslps.alignWithParent = true;
-        crosslps.addRule(CENTER_IN_PARENT, RelativeLayout.TRUE);
-        cross.setLayoutParams(crosslps);
-        rlButton.addView(cross);
-        myani = new Animations(rl1, pos, radius);
-        rlButton.setOnClickListener(new OnClickListener()
+    private void addMenuView(View menu, RelativeLayout.LayoutParams params)
+    {
+        mMenu = menu;
+        menu.setLayoutParams(params);
+        menu.setOnClickListener(new OnClickListener()
         {
             @Override
             public void onClick(View v)
             {
-                if (areButtonsShowing)
+                if (isShowing)
                 {
-                    collapse();
+                    fold();
                 }
                 else
                 {
-                    expand();
+                    unfold();
                 }
             }
         });
-
-        cross.startAnimation(Animations.getRotateAnimation(0, 360, 200));
-        this.addView(rl1);
-        this.addView(rlButton);
+        addView(menu);
     }
 
-    private int[] initAlign(Position pos)
+    private void setClickListener()
     {
-        int align1, align2;
-        if (pos == Position.RIGHTBOTTOM)
-        { // 右下角
-            align1 = ALIGN_PARENT_RIGHT;
-            align2 = ALIGN_PARENT_BOTTOM;
-        }
-        else if (pos == Position.CENTERBOTTOM)
-        {// 中下
-            align1 = CENTER_HORIZONTAL;
-            align2 = ALIGN_PARENT_BOTTOM;
-        }
-        else if (pos == Position.LEFTBOTTOM)
-        { // 左下角
-            align1 = ALIGN_PARENT_LEFT;
-            align2 = ALIGN_PARENT_BOTTOM;
-        }
-        else if (pos == Position.LEFTCENTER)
-        { // 左中
-            align1 = ALIGN_PARENT_LEFT;
-            align2 = CENTER_VERTICAL;
-        }
-        else if (pos == Position.LEFTTOP)
-        { // 左上角
-            align1 = ALIGN_PARENT_LEFT;
-            align2 = ALIGN_PARENT_TOP;
-        }
-        else if (pos == Position.CENTERTOP)
-        { // 中上
-            align1 = CENTER_HORIZONTAL;
-            align2 = ALIGN_PARENT_TOP;
-        }
-        else if (pos == Position.RIGHTTOP)
-        { // 右上角
-            align1 = ALIGN_PARENT_RIGHT;
-            align2 = ALIGN_PARENT_TOP;
-        }
-        else
-        { // 右中
-            align1 = ALIGN_PARENT_RIGHT;
-            align2 = CENTER_VERTICAL;
-        }
-        return new int[]{align1,align2};
-    }
-
-    /**
-     * 收埋
-     */
-    public void collapse()
-    {
-        myani.startAnimationsOut(durTime);
-        cross.startAnimation(Animations.getRotateAnimation(-270, 0, durTime));
-        areButtonsShowing = false;
-    }
-
-    /**
-     * 打開
-     */
-    public void expand()
-    {
-        myani.startAnimationsIn(durTime);
-        cross.startAnimation(Animations.getRotateAnimation(0, -270, durTime));
-        areButtonsShowing = true;
-    }
-
-    /**
-     * 設置各子按鈕嘅onclick事件
-     */
-    public void setButtonsOnClickListener(final OnClickListener l)
-    {
-        for (LinearLayout llayout : llayouts)
+        for (byte i = 0; i < mChilds.length; i++)
         {
-            llayout.setOnClickListener(new OnClickListener()
+            final byte finalI = i;
+            mChilds[i].setOnClickListener(new OnClickListener()
             {
-
                 @Override
-                public void onClick(final View view)
+                public void onClick(View v)
                 {
-                    collapse();
-                    l.onClick(view);
+                    fold();
+                    mListener.onItemClick(finalI);
                 }
             });
         }
     }
 
+    /**
+     * @param pos Location of the screen {@link com.sslcs.arcmenu.ArcMenu.Position}
+     * @return aligns of the ArcMenu
+     */
+    private int[] initPosition(Position pos)
+    {
+        mPosition = pos;
+        if (pos == Position.RIGHT_BOTTOM)
+        {
+            mAngleRange = 90;
+            mOriX = -1;
+            mOriY = -1;
+            return new int[]{ALIGN_PARENT_RIGHT, ALIGN_PARENT_BOTTOM};
+        }
+        else if (pos == Position.BOTTOM_CENTER)
+        {
+            mAngleRange = 180;
+            mOriX = -1;
+            mOriY = -1;
+            return new int[]{CENTER_HORIZONTAL, ALIGN_PARENT_BOTTOM};
+        }
+        else if (pos == Position.LEFT_BOTTOM)
+        {
+            mAngleRange = 90;
+            mOriX = 1;
+            mOriY = -1;
+            return new int[]{ALIGN_PARENT_LEFT, ALIGN_PARENT_BOTTOM};
+        }
+        else if (pos == Position.LEFT_CENTER)
+        {
+            mAngleRange = 180;
+            mOriX = 1;
+            mOriY = -1;
+            return new int[]{ALIGN_PARENT_LEFT, CENTER_VERTICAL};
+        }
+        else if (pos == Position.LEFT_TOP)
+        {
+            mAngleRange = 90;
+            mOriX = 1;
+            mOriY = 1;
+            return new int[]{ALIGN_PARENT_LEFT, ALIGN_PARENT_TOP};
+        }
+        else if (pos == Position.TOP_CENTER)
+        {
+            mAngleRange = 180;
+            mOriX = -1;
+            mOriY = 1;
+            return new int[]{CENTER_HORIZONTAL, ALIGN_PARENT_TOP};
+        }
+        else if (pos == Position.RIGHT_TOP)
+        {
+            mAngleRange = 90;
+            mOriX = -1;
+            mOriY = 1;
+            return new int[]{ALIGN_PARENT_RIGHT, ALIGN_PARENT_TOP};
+        }
+        else
+        {
+            mAngleRange = 180;
+            mOriX = -1;
+            mOriY = -1;
+            return new int[]{ALIGN_PARENT_RIGHT, CENTER_VERTICAL};
+        }
+    }
+
+    /**
+     * @param durationMillis milliseconds of duration for animation
+     */
+    public void setDuration(int durationMillis)
+    {
+        mDuration = durationMillis;
+    }
+
+    /**
+     * Set radius of the ArcMenu
+     * @param radius radius ignore density
+     */
+    public void setRadius(int radius)
+    {
+        float density = getResources().getDisplayMetrics().density;
+        mRadius = (int) (radius * density);
+    }
+
+    /**
+     * Register a callback to be invoked when an item in this ArcMenu has
+     * been clicked.
+     *
+     * @param listener The callback that will be invoked.
+     */
+    public void setOnItemClickListener(OnItemClickListener listener)
+    {
+        mListener = listener;
+        if (null != mChilds)
+        {
+            setClickListener();
+        }
+    }
+
+    /**
+     * fold childs
+     */
+    public void fold()
+    {
+        startAnimationsOut(mDuration);
+        mMenu.startAnimation(getRotateAnimation(-270, 0, mDuration));
+        isShowing = false;
+    }
+
+    /**
+     * show childs
+     */
+    public void unfold()
+    {
+        startAnimationsIn(mDuration);
+        mMenu.startAnimation(getRotateAnimation(0, -270, mDuration));
+        isShowing = true;
+    }
+
+    /**
+     * Animation fo unfold child
+     *
+     * @param durationMillis milliseconds of duration
+     */
+    public void startAnimationsIn(int durationMillis)
+    {
+        for (byte i = 0; i < mCount; i++)
+        {
+            double offsetAngle = mAngleRange / (mCount - 1);
+
+            final double deltaY, deltaX;
+            if (mPosition == ArcMenu.Position.LEFT_CENTER || mPosition == ArcMenu.Position.RIGHT_CENTER)
+            {
+                deltaX = Math.sin(offsetAngle * i * Math.PI / 180) * mRadius;
+                deltaY = Math.cos(offsetAngle * i * Math.PI / 180) * mRadius;
+            }
+            else
+            {
+                deltaY = Math.sin(offsetAngle * i * Math.PI / 180) * mRadius;
+                deltaX = Math.cos(offsetAngle * i * Math.PI / 180) * mRadius;
+            }
+
+            ViewPropertyAnimator animator = mAnimators.get(i);
+            animator.setDuration(durationMillis);
+            float x = (float) (mChilds[i].getLeft() + mOriX * deltaX);
+            float y = (float) (mChilds[i].getTop() + mOriY * deltaY);
+            animator.x(x).y(y);
+        }
+    }
+
+    /**
+     * Animation fo fold child
+     *
+     * @param durationMillis milliseconds of duration
+     */
+    public void startAnimationsOut(int durationMillis)
+    {
+        for (byte i = 0; i < mCount; i++)
+        {
+            ViewPropertyAnimator animator = mAnimators.get(i);
+            animator.setDuration(durationMillis);
+            float x = (float) (mChilds[i].getLeft());
+            float y = (float) (mChilds[i].getTop());
+            animator.x(x).y(y);
+        }
+    }
+
+    /**
+     * Location of the screen :
+     * <p>
+     * LEFT_TOP, TOP_CENTER, RIGHT_TOP, LEFT_CENTER, RIGHT_CENTER, LEFT_BOTTOM, BOTTOM_CENTER, RIGHT_BOTTOM
+     */
     public enum Position
     {
-        RIGHTBOTTOM, CENTERBOTTOM, LEFTBOTTOM, LEFTCENTER, LEFTTOP, CENTERTOP, RIGHTTOP, RIGHTCENTER
+        LEFT_TOP, TOP_CENTER, RIGHT_TOP, LEFT_CENTER, RIGHT_CENTER, LEFT_BOTTOM, BOTTOM_CENTER, RIGHT_BOTTOM
+    }
+
+    /**
+     * Interface definition for a callback to be invoked when an item in ArcMenu
+     * view has been clicked.
+     */
+    public interface OnItemClickListener
+    {
+        /**
+         * Callback method to be invoked when an item in this ArcMenu has
+         * been clicked.
+         *
+         * @param pos The position of the view in the ArcMenu.
+         */
+        public void onItemClick(int pos);
     }
 }
