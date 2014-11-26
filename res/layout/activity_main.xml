@@ -2,9 +2,35 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
     <com.sslcs.arcmenu.ArcMenu
-        android:id="@+id/arc_menu"
+        android:id="@+id/arc_menu_0"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginRight="20dp"
-        android:layout_marginBottom="20dp"/>
+        android:layout_height="wrap_content"/>
+    <com.sslcs.arcmenu.ArcMenu
+        android:id="@+id/arc_menu_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.sslcs.arcmenu.ArcMenu
+        android:id="@+id/arc_menu_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.sslcs.arcmenu.ArcMenu
+        android:id="@+id/arc_menu_3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.sslcs.arcmenu.ArcMenu
+        android:id="@+id/arc_menu_4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.sslcs.arcmenu.ArcMenu
+        android:id="@+id/arc_menu_5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.sslcs.arcmenu.ArcMenu
+        android:id="@+id/arc_menu_6"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.sslcs.arcmenu.ArcMenu
+        android:id="@+id/arc_menu_7"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
 </RelativeLayout>

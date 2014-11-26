@@ -49,8 +49,7 @@ public class ArcMenu extends RelativeLayout
 
     /**
      * initialization
-     *
-     * @param childs child views
+     *  @param childs child views
      * @param menu   menu view
      * @param pos    {@link com.sslcs.arcmenu.ArcMenu.Position}
      */

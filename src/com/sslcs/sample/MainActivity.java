@@ -13,18 +13,15 @@ public class MainActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ArcMenu arcMenu = (ArcMenu) findViewById(R.id.arc_menu);
-        arcMenu.setDuration(300);
-        arcMenu.setRadius(10);
-        arcMenu.init(getChildViews(), getMenuView(), ArcMenu.Position.RIGHT_BOTTOM);
-        arcMenu.setOnItemClickListener(new ArcMenu.OnItemClickListener()
+        ArcMenu[] arcMenus = new ArcMenu[8];
+        ArcMenu.Position[] positions = new ArcMenu.Position[]{ArcMenu.Position.LEFT_TOP, ArcMenu.Position.TOP_CENTER,
+            ArcMenu.Position.RIGHT_TOP, ArcMenu.Position.LEFT_CENTER, ArcMenu.Position.RIGHT_CENTER, ArcMenu.Position.LEFT_BOTTOM, ArcMenu.Position.BOTTOM_CENTER, ArcMenu.Position.RIGHT_BOTTOM};
+        for (byte i = 0; i < 8; i++)
         {
-            @Override
-            public void onItemClick(int pos)
-            {
-                System.out.println("pos = " + pos);
-            }
-        });
+            arcMenus[i] = (ArcMenu) findViewById(R.id.arc_menu_0 + i);
+            arcMenus[i].setRadius(60);
+            arcMenus[i].init(getChildViews(), getMenuView(), positions[i]);
+        }
     }
 
     private ImageView getMenuView()
